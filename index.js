@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const app = express();
 require("dotenv").config();
@@ -27,10 +27,20 @@ async function run() {
     const mainCollection = client.db("restuarant").collection("mainDishes");
 
     // get dessert
-    app.get("/api/dessert", async (req, res) => {
+    app.get("/api/desserts", async (req, res) => {
       const query = {};
       const cursor = dessertCollection.find(query);
-      const dessert = await cursor.toArray();
+      const desserts = await cursor.toArray();
+      res.send(desserts);
+    });
+
+    // get a single item api
+    app.get("/api/desserts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const dessert = await dessertCollection.findOne(query);
       res.send(dessert);
     });
 
@@ -42,12 +52,33 @@ async function run() {
       res.send(drinks);
     });
 
+    // get a single item api
+    app.get("/api/drinks/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Print: " + id);
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const drink = await drinksCollection.findOne(query);
+      res.send(drink);
+    });
+
     // get main dishes
     app.get("/api/main", async (req, res) => {
       const query = {};
       const cursor = mainCollection.find(query);
       const main = await cursor.toArray();
       res.send(main);
+    });
+
+    app.get("/api/main/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Print: " + id);
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const dish = await mainCollection.findOne(query);
+      res.send(dish);
     });
   } finally {
   }
