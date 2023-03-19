@@ -58,6 +58,9 @@ async function run() {
       .collection("drinksCollection");
     const mainCollection = client.db("restuarant").collection("mainDishes");
     const cartCollection = client.db("restuarant").collection("cartCollection");
+    const usersCollection = client
+      .db("restuarant")
+      .collection("usersCollection");
 
     // authentication token
     app.post("/api/token", async (req, res) => {
@@ -143,6 +146,7 @@ async function run() {
       }
     });
 
+    // delete cart item api
     app.delete("/api/cart/:id", async (req, res) => {
       const id = req.params.id;
       const query = {
@@ -150,6 +154,26 @@ async function run() {
       };
       const cart = await cartCollection.deleteOne(query);
       res.send(cart);
+    });
+
+    // create user
+    app.put("/api/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const user = req.body;
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      const token = jwt.sign({ email: email }, process.env.accessTokenSecret, {
+        expiresIn: "1d",
+      });
+      res.send({ result: result, accessToken: token });
     });
   } finally {
   }
