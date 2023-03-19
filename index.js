@@ -82,7 +82,11 @@ async function run() {
     });
 
     // add to cart api
-    app.post("/api/", async (req, res) => {});
+    app.post("/api/cart", async (req, res) => {
+      const cartItem = req.body;
+      const result = await cartCollection.insertOne(cartItem);
+      res.send(result);
+    });
   } finally {
   }
 }
