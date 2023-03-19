@@ -87,6 +87,24 @@ async function run() {
       const result = await cartCollection.insertOne(cartItem);
       res.send(result);
     });
+
+    // get all cart items api
+    app.get("/api/cart", async (req, res) => {
+      const customerEmail = req.query.customerEmail;
+      const query = { customerEmail: customerEmail };
+      const cursor = cartCollection.find(query);
+      const cart = await cursor.toArray();
+      res.send(cart);
+    });
+
+    app.delete("/api/cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const cart = await cartCollection.deleteOne(query);
+      res.send(cart);
+    });
   } finally {
   }
 }
