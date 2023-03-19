@@ -16,8 +16,8 @@ const verifyJwt = (req, res, next) => {
     return res.status(401).send({ message: "Unauthorized Access" });
   }
   const token = authHeader.split(" ")[1];
-  jwt.verify(token, process.env.accessTokenSecret, function (error, decoded) {
-    if (error) {
+  jwt.verify(token, process.env.accessTokenSecret, function (err, decoded) {
+    if (err) {
       return res.status(403).send({ message: "Access Forbidden" });
     }
     req.decoded = decoded;
@@ -134,8 +134,8 @@ async function run() {
 
     // get all cart items api
     app.get("/api/cart", verifyJwt, async (req, res) => {
-      const decodedEmail = req.decoded.email;
       const customerEmail = req.query.customerEmail;
+      const decodedEmail = req.decoded.email;
       if (customerEmail === decodedEmail) {
         const query = { customerEmail: customerEmail };
         const cursor = cartCollection.find(query);
