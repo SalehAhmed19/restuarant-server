@@ -25,6 +25,7 @@ async function run() {
       .db("restuarant")
       .collection("drinksCollection");
     const mainCollection = client.db("restuarant").collection("mainDishes");
+    const cartCollection = client.db("restuarant").collection("cartCollection");
 
     // get dessert
     app.get("/api/desserts", async (req, res) => {
@@ -55,7 +56,6 @@ async function run() {
     // get a single item api
     app.get("/api/drinks/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Print: " + id);
       const query = {
         _id: new ObjectId(id),
       };
@@ -71,15 +71,18 @@ async function run() {
       res.send(main);
     });
 
+    // get a single item api
     app.get("/api/main/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Print: " + id);
       const query = {
         _id: new ObjectId(id),
       };
       const dish = await mainCollection.findOne(query);
       res.send(dish);
     });
+
+    // add to cart api
+    app.post("/api/", async (req, res) => {});
   } finally {
   }
 }
@@ -91,3 +94,12 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log("Listening to port ", PORT);
 });
+
+/**
+ * API Naming convention
+ * app.get("/api/content") - get all content
+ * app.get("/api/content/:id) - get individual content by id
+ * app.post("/api/content") - add a new content
+ * app.patch("/api/content/:id") - update content
+ * app.delete("/api/content/:id") - delete content
+ */
