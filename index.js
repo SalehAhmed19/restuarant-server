@@ -147,18 +147,18 @@ async function run() {
     });
 
     // get all cart items api
-    app.get("/api/cart", verifyJwt, async (req, res) => {
-      // const authHeader = req.headers.authorization;
+    app.get("/api/cart", async (req, res) => {
+      // // const authHeader = req.headers.authorization;
       const customerEmail = req.query.customerEmail;
-      const decodedEmail = req.decoded.email;
-      if (customerEmail === decodedEmail) {
-        const query = { customerEmail: customerEmail };
-        const cursor = cartCollection.find(query);
-        const cart = await cursor.toArray();
-        return res.send(cart);
-      } else {
-        return res.status(403).send({ message: "Access Forbidden" });
-      }
+      // const decodedEmail = req.decoded.email;
+      // if (customerEmail === decodedEmail) {
+      const query = { customerEmail: customerEmail };
+      const cursor = cartCollection.find(query);
+      const cart = await cursor.toArray();
+      res.send(cart);
+      // } else {
+      //   return res.status(403).send({ message: "Access Forbidden" });
+      // }
     });
 
     // delete cart item api
