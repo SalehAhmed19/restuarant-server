@@ -10,8 +10,9 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-const verifyJwt = (req, res, next) => {
+function verifyJwt(req, res, next) {
   const authHeader = req.headers.authorization;
+  // console.log(authHeader);
   if (!authHeader) {
     return res.status(401).send({ message: "Unauthorized Access" });
   }
@@ -19,13 +20,12 @@ const verifyJwt = (req, res, next) => {
   jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: "Access Forbidden" });
-    } else {
-      req.decoded = decoded;
-      next();
-      // console.log("first", token);
     }
+    req.decoded = decoded;
+    console.log("first", token);
+    next();
   });
-};
+}
 
 // const verifyJWT = (req, res, next) => {
 //   const authHeader = req.headers.authorization;
@@ -71,6 +71,18 @@ async function run() {
         expiresIn: "1d",
       });
       res.send({ token: token });
+    });
+
+    app.get("/api/token", async (req, res) => {
+      const customerEmail = req.body.email;
+      const query = { customerEmail: email };
+      const user = await usersCollection.findOne(query);
+      if (user) {
+        const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
+          expiresIn: "1d",
+        });
+        return res.send({ accessToken: token });
+      }
     });
 
     // get dessert
