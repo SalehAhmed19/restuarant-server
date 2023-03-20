@@ -16,12 +16,14 @@ const verifyJwt = (req, res, next) => {
     return res.status(401).send({ message: "Unauthorized Access" });
   }
   const token = authHeader.split(" ")[1];
-  jwt.verify(token, process.env.accessTokenSecret, function (err, decoded) {
+  jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: "Access Forbidden" });
+    } else {
+      req.decoded = decoded;
+      next();
+      console.log("first", token);
     }
-    req.decoded = decoded;
-    next();
   });
 };
 
@@ -65,7 +67,7 @@ async function run() {
     // authentication token
     app.post("/api/token", async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.accessTokenSecret, {
+      const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
         expiresIn: "1d",
       });
       res.send({ token: token });
@@ -134,15 +136,16 @@ async function run() {
 
     // get all cart items api
     app.get("/api/cart", verifyJwt, async (req, res) => {
+      // const authHeader = req.headers.authorization;
       const customerEmail = req.query.customerEmail;
       const decodedEmail = req.decoded.email;
       if (customerEmail === decodedEmail) {
         const query = { customerEmail: customerEmail };
         const cursor = cartCollection.find(query);
         const cart = await cursor.toArray();
-        res.send(cart);
+        return res.send(cart);
       } else {
-        res.status(403).send({ message: "Access Forbidden" });
+        return res.status(403).send({ message: "Access Forbidden" });
       }
     });
 
@@ -170,7 +173,7 @@ async function run() {
         updateDoc,
         options
       );
-      const token = jwt.sign({ email: email }, process.env.accessTokenSecret, {
+      const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
         expiresIn: "1d",
       });
       res.send({ result: result, accessToken: token });
