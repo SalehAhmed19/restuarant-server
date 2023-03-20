@@ -22,7 +22,7 @@ const verifyJwt = (req, res, next) => {
     } else {
       req.decoded = decoded;
       next();
-      console.log("first", token);
+      // console.log("first", token);
     }
   });
 };
