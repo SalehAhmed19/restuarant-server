@@ -11,9 +11,9 @@ app.use(cors());
 app.use(express.json());
 
 function verifyJWT(req, res, next) {
-  console.log("token inside jwt", req.headers.authorization);
+  // console.log("token inside jwt", req.headers.authorization);
   const authHeader = req.headers.authorization;
-  console.log(authHeader);
+  // console.log(authHeader);
   if (!authHeader) {
     return res.status(401).send("Unauthorized Access");
   }
@@ -156,7 +156,7 @@ async function run() {
     app.get("/api/cart", verifyJWT, async (req, res) => {
       const customerEmail = req.query.email;
       const decodedEmail = req.decoded.email;
-      console.log(customerEmail === decodedEmail);
+      // console.log(customerEmail === decodedEmail);
       if (customerEmail !== decodedEmail) {
         return res.status(403).send({ message: "Access Forbidden" });
       }
