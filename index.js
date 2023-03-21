@@ -10,22 +10,40 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-function verifyJwt(req, res, next) {
+function verifyJWT(req, res, next) {
+  console.log("token inside jwt", req.headers.authorization);
   const authHeader = req.headers.authorization;
-  // console.log(authHeader);
+  console.log(authHeader);
   if (!authHeader) {
-    return res.status(401).send({ message: "Unauthorized Access" });
+    return res.status(401).send("Unauthorized Access");
   }
   const token = authHeader.split(" ")[1];
-  jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
+
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: "Access Forbidden" });
     }
     req.decoded = decoded;
-    console.log("first", token);
     next();
   });
 }
+
+// function verifyJwt(req, res, next) {
+//   const authHeader = req.headers.authorization;
+//   // console.log(authHeader);
+//   if (!authHeader) {
+//     return res.status(401).send({ message: "Unauthorized Access" });
+//   }
+//   const token = authHeader.split(" ")[1];
+//   jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
+//     if (err) {
+//       return res.status(403).send({ message: "Access Forbidden" });
+//     }
+//     req.decoded = decoded;
+//     console.log("first", token);
+//     next();
+//   });
+// }
 
 // const verifyJWT = (req, res, next) => {
 //   const authHeader = req.headers.authorization;
@@ -65,25 +83,13 @@ async function run() {
       .collection("usersCollection");
 
     // authentication token
-    app.post("/api/token", async (req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
-        expiresIn: "1d",
-      });
-      res.send({ token: token });
-    });
-
-    app.get("/api/token", async (req, res) => {
-      const customerEmail = req.body.email;
-      const query = { customerEmail: email };
-      const user = await usersCollection.findOne(query);
-      if (user) {
-        const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
-          expiresIn: "1d",
-        });
-        return res.send({ accessToken: token });
-      }
-    });
+    // app.post("/api/token", async (req, res) => {
+    //   const user = req.body;
+    //   const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
+    //     expiresIn: "1d",
+    //   });
+    //   res.send({ token: token });
+    // });
 
     // get dessert
     app.get("/api/desserts", async (req, res) => {
@@ -147,18 +153,17 @@ async function run() {
     });
 
     // get all cart items api
-    app.get("/api/cart", async (req, res) => {
-      // // const authHeader = req.headers.authorization;
-      const customerEmail = req.query.customerEmail;
-      // const decodedEmail = req.decoded.email;
-      // if (customerEmail === decodedEmail) {
+    app.get("/api/cart", verifyJWT, async (req, res) => {
+      const customerEmail = req.query.email;
+      const decodedEmail = req.decoded.email;
+      console.log(customerEmail === decodedEmail);
+      if (customerEmail !== decodedEmail) {
+        return res.status(403).send({ message: "Access Forbidden" });
+      }
       const query = { customerEmail: customerEmail };
       const cursor = cartCollection.find(query);
       const cart = await cursor.toArray();
       res.send(cart);
-      // } else {
-      //   return res.status(403).send({ message: "Access Forbidden" });
-      // }
     });
 
     // delete cart item api
@@ -172,6 +177,38 @@ async function run() {
     });
 
     // create user
+    // app.put("/api/users/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //   const filter = { email: email };
+    //   const user = req.body;
+    //   const options = { upsert: true };
+    //   const updateDoc = {
+    //     $set: user,
+    //   };
+    //   const result = await usersCollection.updateOne(
+    //     filter,
+    //     updateDoc,
+    //     options
+    //   );
+    //   const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
+    //     expiresIn: "1d",
+    //   });
+    //   res.send({ result: result, accessToken: token });
+    // });
+
+    app.get("/api/jwt", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user) {
+        const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+          expiresIn: "1h",
+        });
+        return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: "" });
+    });
+
     app.put("/api/users/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
@@ -185,10 +222,10 @@ async function run() {
         updateDoc,
         options
       );
-      const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
-        expiresIn: "1d",
-      });
-      res.send({ result: result, accessToken: token });
+      // const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
+      //   expiresIn: "1d",
+      // });
+      res.send({ result: result });
     });
   } finally {
   }
