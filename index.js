@@ -1,7 +1,9 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
+const bodyParser = require("body-parser");
 const app = express();
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 
@@ -9,11 +11,12 @@ const PORT = process.env.PORT || 4000;
 // middleware
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
+// verify JWT function
 function verifyJWT(req, res, next) {
-  // console.log("token inside jwt", req.headers.authorization);
   const authHeader = req.headers.authorization;
-  // console.log(authHeader);
   if (!authHeader) {
     return res.status(401).send("Unauthorized Access");
   }
@@ -27,38 +30,6 @@ function verifyJWT(req, res, next) {
     next();
   });
 }
-
-// function verifyJwt(req, res, next) {
-//   const authHeader = req.headers.authorization;
-//   // console.log(authHeader);
-//   if (!authHeader) {
-//     return res.status(401).send({ message: "Unauthorized Access" });
-//   }
-//   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
-//     if (err) {
-//       return res.status(403).send({ message: "Access Forbidden" });
-//     }
-//     req.decoded = decoded;
-//     console.log("first", token);
-//     next();
-//   });
-// }
-
-// const verifyJWT = (req, res, next) => {
-//   const authHeader = req.headers.authorization;
-//   if (!authHeader) {
-//     return res.status(401).send({ message: "Unauthorized" });
-//   }
-//   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-//     if (err) {
-//       return res.status(403).send({ message: "Forbidden" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// };
 
 const uri = `mongodb+srv://${process.env.dbUser}:${process.env.dbPassword}@cluster0.f0u4qmq.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -81,15 +52,6 @@ async function run() {
     const usersCollection = client
       .db("restuarant")
       .collection("usersCollection");
-
-    // authentication token
-    // app.post("/api/token", async (req, res) => {
-    //   const user = req.body;
-    //   const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
-    //     expiresIn: "1d",
-    //   });
-    //   res.send({ token: token });
-    // });
 
     // get dessert
     app.get("/api/desserts", async (req, res) => {
@@ -176,26 +138,6 @@ async function run() {
       res.send(cart);
     });
 
-    // create user
-    // app.put("/api/users/:email", async (req, res) => {
-    //   const email = req.params.email;
-    //   const filter = { email: email };
-    //   const user = req.body;
-    //   const options = { upsert: true };
-    //   const updateDoc = {
-    //     $set: user,
-    //   };
-    //   const result = await usersCollection.updateOne(
-    //     filter,
-    //     updateDoc,
-    //     options
-    //   );
-    //   const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
-    //     expiresIn: "1d",
-    //   });
-    //   res.send({ result: result, accessToken: token });
-    // });
-
     app.get("/api/jwt", async (req, res) => {
       const email = req.query.email;
       // console.log(email);
@@ -223,10 +165,50 @@ async function run() {
         updateDoc,
         options
       );
-      // const token = jwt.sign({ email: email }, process.env.JWT_TOKEN_SECRET, {
-      //   expiresIn: "1d",
-      // });
       res.send({ result: result });
+    });
+
+    // stripe checkout
+    app.post("/api/create-checkout-session", async (req, res) => {
+      const line_items = req.body.carts.map((item) => {
+        return {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: item.food,
+              images: [item.foodImg],
+              des: item.des,
+              metadata: {
+                id: item._id,
+              },
+            },
+            unit_amount: item.price * 100,
+          },
+          quantity: item.quantity,
+        };
+      });
+      const session = await stripe.checkout.sessions.create({
+        shipping_address_collection: { allowed_countries: ["US", "CA", "BD"] },
+        shipping_options: [
+          {
+            shipping_rate_data: {
+              type: "fixed_amount",
+              fixed_amount: { amount: 0, currency: "usd" },
+              display_name: "Free shipping",
+              delivery_estimate: {
+                minimum: { unit: "business_day", value: 5 },
+                maximum: { unit: "business_day", value: 7 },
+              },
+            },
+          },
+        ],
+        phone_number_collection: { enabled: true },
+        line_items: line_items,
+        mode: "payment",
+        success_url: `${process.env.FRONTEND_URL}/checkout-success`,
+        cancel_url: `${process.env.FRONTEND_URL}/cart`,
+      });
+      res.send({ url: session.url });
     });
   } finally {
   }
