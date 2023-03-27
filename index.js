@@ -56,6 +56,20 @@ async function run() {
       .db("restuarant")
       .collection("ordersCollection");
 
+    app.get("/api/jwt", async (req, res) => {
+      const email = req.query.email;
+      // console.log(email);
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user) {
+        const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+          expiresIn: "1h",
+        });
+        return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: "" });
+    });
+
     // get dessert
     app.get("/api/desserts", async (req, res) => {
       const query = {};
@@ -141,18 +155,17 @@ async function run() {
       res.send(cart);
     });
 
-    app.get("/api/jwt", async (req, res) => {
-      const email = req.query.email;
-      // console.log(email);
-      const query = { email: email };
-      const user = await usersCollection.findOne(query);
-      if (user) {
-        const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
-          expiresIn: "1h",
-        });
-        return res.send({ accessToken: token });
+    app.get("/api/orders", verifyJWT, async (req, res) => {
+      const customerEmail = req.query.email;
+      const decodedEmail = req.decoded.email;
+      // console.log(customerEmail === decodedEmail);
+      if (customerEmail !== decodedEmail) {
+        return res.status(403).send({ message: "Access Forbidden" });
       }
-      res.status(403).send({ accessToken: "" });
+      const query = { email: customerEmail };
+      const cursor = ordersCollection.find(query);
+      const orders = await cursor.toArray();
+      res.send(orders);
     });
 
     app.put("/api/users/:email", async (req, res) => {
