@@ -52,6 +52,9 @@ async function run() {
     const usersCollection = client
       .db("restuarant")
       .collection("usersCollection");
+    const ordersCollection = client
+      .db("restuarant")
+      .collection("ordersCollection");
 
     // get dessert
     app.get("/api/desserts", async (req, res) => {
@@ -168,47 +171,30 @@ async function run() {
       res.send({ result: result });
     });
 
-    // stripe checkout
-    app.post("/api/create-checkout-session", async (req, res) => {
-      const line_items = req.body.carts.map((item) => {
-        return {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: item.food,
-              images: [item.foodImg],
-              des: item.des,
-              metadata: {
-                id: item._id,
-              },
-            },
-            unit_amount: item.price * 100,
-          },
-          quantity: item.quantity,
-        };
+    app.post("/api/create-payment-intent", async (req, res) => {
+      // const { items } = req.body;
+      const cartItem = req.body;
+      const price = cartItem.price;
+      const amount = price * 100;
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        // amount: calculateOrderAmount(items),
+        currency: "usd",
+        amount: amount,
+        payment_method_types: ["card"],
       });
-      const session = await stripe.checkout.sessions.create({
-        shipping_address_collection: { allowed_countries: ["US", "CA", "BD"] },
-        shipping_options: [
-          {
-            shipping_rate_data: {
-              type: "fixed_amount",
-              fixed_amount: { amount: 0, currency: "usd" },
-              display_name: "Free shipping",
-              delivery_estimate: {
-                minimum: { unit: "business_day", value: 5 },
-                maximum: { unit: "business_day", value: 7 },
-              },
-            },
-          },
-        ],
-        phone_number_collection: { enabled: true },
-        line_items: line_items,
-        mode: "payment",
-        success_url: `${process.env.FRONTEND_URL}/checkout-success`,
-        cancel_url: `${process.env.FRONTEND_URL}/cart`,
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
       });
-      res.send({ url: session.url });
+    });
+
+    // make an order
+    app.post("/api/make-order", async (req, res) => {
+      const order = req.body;
+      const result = await ordersCollection.insertOne(order);
+      res.send(result);
     });
   } finally {
   }
